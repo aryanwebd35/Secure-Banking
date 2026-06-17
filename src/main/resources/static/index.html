@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SecureBank — India's premium digital banking platform. Open an account, make instant transfers, and manage your finances securely.">
+  <title>SecureBank — Smart Banking for India</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <!-- Clerk JS v5 — needed for proper sign-in/sign-up with OTP -->
+  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript" async></script>
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header id="mainHeader">
+    <div class="brand" onclick="navigateTo('home')">
+      <div class="brand-logo"></div>
+      <div class="brand-name">Secure<span>Bank</span></div>
+    </div>
+
+    <nav class="nav-links" id="mainNav">
+      <a href="#" id="navHome" class="nav-item active" onclick="navigateTo('home'); return false;">Home</a>
+      <a href="#" class="nav-item" onclick="scrollToSection('services'); return false;">Services</a>
+      <a href="#" class="nav-item" onclick="scrollToSection('invest'); return false;">Invest</a>
+      <a href="#" id="navAbout" class="nav-item" onclick="navigateTo('about'); return false;">About</a>
+      <a href="#" class="nav-item" onclick="navigateTo('login'); return false;" style="color:var(--primary); font-weight:600;">Sign In</a>
+      <a href="#" onclick="navigateTo('signup'); return false;">
+        <button class="btn btn-primary btn-sm">Open Account</button>
+      </a>
+    </nav>
+
+    <div id="headerAuthStatus" class="header-auth"></div>
+  </header>
+
+  <!-- ===== TOAST CONTAINER ===== -->
+  <div id="toastContainer"></div>
+
+  <!-- ===== PHONE SETUP MODAL ===== -->
+  <div id="phoneSetupModal" style="display:none;">
+    <div class="phone-setup-card">
+      <div class="phone-setup-icon">📱</div>
+      <h2>One Last Step!</h2>
+      <p>Enter your 10-digit mobile number. Others will use this to send you money instantly — like UPI but simpler.</p>
+      <form id="phoneSetupForm" onsubmit="handlePhoneSetup(event)">
+        <div class="form-group">
+          <label for="setupPhone">Your Mobile Number</label>
+          <input type="tel" id="setupPhone" class="form-input" placeholder="9876543210"
+                 pattern="\d{10}" maxlength="10" required autocomplete="tel"
+                 style="font-size:1.1rem; letter-spacing:.1em; font-family:monospace;">
+        </div>
+        <div class="info-box">
+          <span>ℹ️</span>
+          <span>This number is your unique transfer ID. Make sure it's correct — it can't be changed once set.</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block" id="phoneSetupBtn">
+          Confirm & Open My Account →
+        </button>
+        <p id="phoneSetupError" style="color:var(--danger);font-size:.8rem;margin-top:.5rem;display:none;"></p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================================================================
+       PAGE: HOME
+       ================================================================ -->
+  <div data-page="home" class="active-page">
+
+    <!-- HERO -->
+    <section class="hero-wrapper">
+      <div class="hero-content">
+        <div class="hero-badge">🇮🇳 Trusted by 50,000+ Indians</div>
+        <h1 class="hero-title">
+          Banking that works<br>
+          <span class="highlight">as hard as you do.</span>
+        </h1>
+        <p class="hero-subtitle">
+          Deposits, withdrawals, instant transfers, SIP investments and more — secured with bank-grade encryption. Open your account in under 2 minutes.
+        </p>
+        <div class="hero-cta">
+          <button class="btn btn-primary btn-lg" id="heroSignupBtn" onclick="navigateTo('signup')">
+            Open Free Account →
+          </button>
+          <button class="btn btn-ghost btn-lg" onclick="scrollToSection('services')">
+            Explore Services
+          </button>
+        </div>
+        <div class="trust-row">
+          <div class="trust-item"><span class="trust-icon">🔒</span><span>256-bit SSL</span></div>
+          <div class="trust-divider"></div>
+          <div class="trust-item"><span class="trust-icon">🏦</span><span>RBI Compliant</span></div>
+          <div class="trust-divider"></div>
+          <div class="trust-item"><span class="trust-icon">⚡</span><span>Instant Transfers</span></div>
+          <div class="trust-divider"></div>
+          <div class="trust-item"><span class="trust-icon">📱</span><span>24/7 Support</span></div>
+        </div>
+      </div>
+
+      <div class="hero-stats-panel">
+        <div class="hero-stat-card accent-card">
+          <div class="hero-stat-icon">💰</div>
+          <div>
+            <div class="hero-stat-value">₹2.4Cr+</div>
+            <div class="hero-stat-label">Total Deposits Processed</div>
+          </div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="hero-stat-icon">👥</div>
+          <div>
+            <div class="hero-stat-value">50,000+</div>
+            <div class="hero-stat-label">Active Account Holders</div>
+          </div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="hero-stat-icon">⚡</div>
+          <div>
+            <div class="hero-stat-value">1.2M+</div>
+            <div class="hero-stat-label">Transactions This Year</div>
+          </div>
+        </div>
+        <div class="hero-stat-card">
+          <div class="hero-stat-icon">🛡️</div>
+          <div>
+            <div class="hero-stat-value">99.9%</div>
+            <div class="hero-stat-label">Uptime Guaranteed</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MARQUEE TICKER -->
+    <div class="ticker-bar">
+      <div class="ticker-content">
+        <span>📈 SENSEX: 81,450 <em class="up">+312</em></span>
+        <span>📉 NIFTY 50: 24,770 <em class="up">+98</em></span>
+        <span>💱 USD/INR: 83.42 <em class="down">-0.12</em></span>
+        <span>🏦 RBI Repo Rate: 6.50%</span>
+        <span>📊 SBI FD Rate: 7.10% p.a.</span>
+        <span>🥇 Gold: ₹71,500/10g <em class="up">+₹250</em></span>
+        <span>📈 SENSEX: 81,450 <em class="up">+312</em></span>
+        <span>📉 NIFTY 50: 24,770 <em class="up">+98</em></span>
+        <span>💱 USD/INR: 83.42 <em class="down">-0.12</em></span>
+        <span>🏦 RBI Repo Rate: 6.50%</span>
+        <span>📊 SBI FD Rate: 7.10% p.a.</span>
+        <span>🥇 Gold: ₹71,500/10g <em class="up">+₹250</em></span>
+      </div>
+    </div>
+
+    <!-- SERVICES -->
+    <section class="section" id="services">
+      <div class="section-inner">
+        <div class="section-label">WHAT WE OFFER</div>
+        <h2 class="section-title">Everything you need,<br>one platform.</h2>
+        <p class="section-subtitle">From everyday banking to long-term investments — SecureBank has you covered.</p>
+        <div class="services-grid">
+          <div class="service-card service-active" onclick="navigateTo('signup')">
+            <div class="service-icon-wrap navy">💳</div>
+            <h3>Savings Account</h3>
+            <p>Zero balance account with up to 4% interest. Instant activation, no paperwork.</p>
+            <div class="service-tag">AVAILABLE NOW</div>
+          </div>
+          <div class="service-card service-active" onclick="navigateTo('signup')">
+            <div class="service-icon-wrap navy">⚡</div>
+            <h3>Instant Transfer</h3>
+            <p>Send money to anyone in seconds using their registered phone number. No limits, no delays.</p>
+            <div class="service-tag">AVAILABLE NOW</div>
+          </div>
+          <div class="service-card service-active" onclick="navigateTo('signup')">
+            <div class="service-icon-wrap navy">🏧</div>
+            <h3>Deposit &amp; Withdraw</h3>
+            <p>Deposit and withdraw funds instantly. Track every rupee with real-time balance updates.</p>
+            <div class="service-tag">AVAILABLE NOW</div>
+          </div>
+          <div class="service-card service-coming">
+            <div class="service-icon-wrap orange">📈</div>
+            <h3>SIP — Systematic Investment</h3>
+            <p>Start your SIP from just ₹500/month. Grow your wealth automatically through mutual funds.</p>
+            <div class="service-tag coming">COMING SOON</div>
+            <div class="notify-row">
+              <input type="email" class="notify-input" id="sipEmail" placeholder="Enter email for launch alert">
+              <button class="btn btn-sm btn-outline" onclick="notifyMe('sip')">Notify Me</button>
+            </div>
+          </div>
+          <div class="service-card service-coming">
+            <div class="service-icon-wrap orange">📊</div>
+            <h3>Mutual Funds</h3>
+            <p>Invest in top-rated ELSS, Debt, and Equity funds curated by our AI advisor. Tax-saving options available.</p>
+            <div class="service-tag coming">COMING SOON</div>
+            <div class="notify-row">
+              <input type="email" class="notify-input" id="mfEmail" placeholder="Enter email for launch alert">
+              <button class="btn btn-sm btn-outline" onclick="notifyMe('mf')">Notify Me</button>
+            </div>
+          </div>
+          <div class="service-card service-coming">
+            <div class="service-icon-wrap orange">🏠</div>
+            <h3>Home &amp; Personal Loans</h3>
+            <p>Competitive interest rates starting at 8.5%. Paperless application, approval in 24 hours.</p>
+            <div class="service-tag coming">COMING SOON</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section section-alt">
+      <div class="section-inner">
+        <div class="section-label">HOW IT WORKS</div>
+        <h2 class="section-title">Open your account in<br>3 simple steps</h2>
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">01</div>
+            <div class="step-content">
+              <h3>Sign Up with Clerk</h3>
+              <p>Click "Open Free Account" and sign up via email OTP or Google. Fast, secure, and passwordless.</p>
+            </div>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step-card">
+            <div class="step-number">02</div>
+            <div class="step-content">
+              <h3>Set Your Phone Number</h3>
+              <p>Enter your real 10-digit mobile number. This becomes your unique transfer ID — others use it to send you money.</p>
+            </div>
+          </div>
+          <div class="step-arrow">→</div>
+          <div class="step-card">
+            <div class="step-number">03</div>
+            <div class="step-content">
+              <h3>Start Banking</h3>
+              <p>Deposit money, transfer to others using their phone number, and track all transactions in real-time.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVEST SECTION -->
+    <section class="section" id="invest">
+      <div class="section-inner">
+        <div class="section-label">INVESTMENTS</div>
+        <h2 class="section-title">Build wealth with<br>smart investing</h2>
+        <p class="section-subtitle">Our upcoming investment suite will give you access to the best SIPs and Mutual Funds in India.</p>
+        <div class="invest-grid">
+          <div class="invest-card">
+            <div class="invest-header">
+              <div class="invest-icon">📈</div>
+              <div class="coming-soon-badge">COMING SOON</div>
+            </div>
+            <h3>Systematic Investment Plan (SIP)</h3>
+            <p>Invest small amounts consistently and harness the power of compounding. Start with as little as ₹500/month.</p>
+            <div class="sip-calculator">
+              <div class="calc-title">SIP Returns Calculator</div>
+              <div class="calc-row"><span>Monthly Investment</span><span class="calc-val">₹5,000</span></div>
+              <div class="calc-row"><span>Expected Returns</span><span class="calc-val">12% p.a.</span></div>
+              <div class="calc-row"><span>Duration</span><span class="calc-val">10 Years</span></div>
+              <div class="calc-result"><span>Estimated Value</span><strong>₹11.6 Lakh</strong></div>
+            </div>
+          </div>
+          <div class="invest-card">
+            <div class="invest-header">
+              <div class="invest-icon">📊</div>
+              <div class="coming-soon-badge">COMING SOON</div>
+            </div>
+            <h3>Mutual Funds</h3>
+            <p>Diversify across asset classes with professionally managed funds. Zero commission, direct plans available.</p>
+            <div class="mf-list">
+              <div class="mf-item">
+                <div><div class="mf-name">Mirae Asset Large Cap</div><div class="mf-type">Equity · Large Cap</div></div>
+                <div class="mf-return up">+18.4%</div>
+              </div>
+              <div class="mf-item">
+                <div><div class="mf-name">Axis ELSS Tax Saver</div><div class="mf-type">Equity · ELSS · Tax Saving</div></div>
+                <div class="mf-return up">+21.2%</div>
+              </div>
+              <div class="mf-item">
+                <div><div class="mf-name">HDFC Short Term Debt</div><div class="mf-type">Debt · Low Risk</div></div>
+                <div class="mf-return up">+7.1%</div>
+              </div>
+              <div class="mf-note">*1 Year returns. Past performance is not indicative of future results.</div>
+            </div>
+          </div>
+          <div class="invest-card">
+            <div class="invest-header">
+              <div class="invest-icon">🏦</div>
+              <div class="coming-soon-badge">COMING SOON</div>
+            </div>
+            <h3>Fixed Deposits</h3>
+            <p>Guaranteed returns with zero market risk. Flexible tenures from 7 days to 10 years.</p>
+            <div class="fd-rates">
+              <div class="fd-row"><span>7 – 45 days</span><span class="fd-rate">4.50%</span></div>
+              <div class="fd-row"><span>3 – 6 months</span><span class="fd-rate">6.00%</span></div>
+              <div class="fd-row"><span>1 – 2 years</span><span class="fd-rate">7.10%</span></div>
+              <div class="fd-row highlight-row"><span>2 – 3 years</span><span class="fd-rate">7.50%</span></div>
+              <div class="fd-note">Senior citizen additional 0.25% p.a.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRANSFER EXPLAINED -->
+    <section class="section section-alt">
+      <div class="section-inner transfer-section">
+        <div class="transfer-text">
+          <div class="section-label">INSTANT TRANSFERS</div>
+          <h2 class="section-title" style="font-size:2.2rem;">Send money using<br>just a phone number</h2>
+          <p style="color:var(--gray-500); line-height:1.8; margin-bottom:1.5rem;">
+            Every SecureBank account is linked to your real 10-digit mobile number. To send money, simply enter the receiver's phone number and amount — money reaches instantly.
+          </p>
+          <div class="transfer-steps">
+            <div class="t-step"><div class="t-step-num">1</div><div>Login and go to your <strong>Customer Dashboard</strong></div></div>
+            <div class="t-step"><div class="t-step-num">2</div><div>Find your <strong>registered phone number</strong> (shown on dashboard)</div></div>
+            <div class="t-step"><div class="t-step-num">3</div><div>Share it with others — they can <strong>send you money</strong> instantly</div></div>
+            <div class="t-step"><div class="t-step-num">4</div><div>Use <strong>Send Money</strong> panel to pay others with their phone number</div></div>
+          </div>
+          <button class="btn btn-primary" onclick="navigateTo('signup')">Try It Now →</button>
+        </div>
+        <div class="transfer-demo">
+          <div class="phone-mockup">
+            <div class="phone-header"><span>SecureBank</span><span>11:43 PM</span></div>
+            <div class="phone-balance">
+              <div style="font-size:.7rem; opacity:.7; text-transform:uppercase; letter-spacing:.1em;">Available Balance</div>
+              <div style="font-size:2rem; font-weight:900; margin:.3rem 0;">₹45,000.00</div>
+              <div class="phone-acno">📱 9876543210</div>
+            </div>
+            <div class="phone-action">
+              <div class="phone-field"><div class="phone-field-label">Receiver Phone</div><div class="phone-field-val">9123456789</div></div>
+              <div class="phone-field"><div class="phone-field-label">Amount</div><div class="phone-field-val">₹2,500.00</div></div>
+              <div class="phone-btn">⚡ Transfer Instantly</div>
+            </div>
+            <div class="phone-success">✓ ₹2,500 sent successfully!</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="section">
+      <div class="section-inner">
+        <div class="section-label">TESTIMONIALS</div>
+        <h2 class="section-title">Loved by thousands</h2>
+        <div class="testimonials-grid">
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p>"Transferred money to my family in Pune within seconds. The phone number feature is so intuitive — no IFSC, no account numbers to remember!"</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">R</div>
+              <div><strong>Rahul Sharma</strong><span>Software Engineer, Bangalore</span></div>
+            </div>
+          </div>
+          <div class="testimonial-card featured-testimonial">
+            <div class="stars">★★★★★</div>
+            <p>"Clean UI, instant transactions, and the admin panel is excellent for monitoring. The Clerk sign-in with OTP is so smooth — love it!"</p>
+            <div class="testimonial-author">
+              <div class="author-avatar gold-avatar">P</div>
+              <div><strong>Priya Menon</strong><span>CA &amp; Financial Advisor, Mumbai</span></div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="stars">★★★★★</div>
+            <p>"The real-time transaction history is brilliant. I can see every deposit and withdrawal with timestamps. Feels like a proper banking app!"</p>
+            <div class="testimonial-author">
+              <div class="author-avatar">A</div>
+              <div><strong>Amit Verma</strong><span>Business Owner, Delhi</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA BANNER -->
+    <section class="cta-banner">
+      <div class="cta-inner">
+        <h2>Ready to experience smarter banking?</h2>
+        <p>Open your free account in under 2 minutes. No documents, no branch visit.</p>
+        <button class="btn btn-white btn-lg" onclick="navigateTo('signup')">Open Free Account →</button>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <div class="brand" style="margin-bottom:.75rem;">
+            <div class="brand-logo"></div>
+            <div class="brand-name">Secure<span>Bank</span></div>
+          </div>
+          <p>A modern banking platform built on Spring Boot, Spring Security &amp; JWT. Enterprise-grade banking architecture with Clerk authentication.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Products</h4>
+          <a href="#" onclick="navigateTo('signup'); return false;">Savings Account</a>
+          <a href="#" onclick="scrollToSection('invest'); return false;">SIP (Coming Soon)</a>
+          <a href="#" onclick="scrollToSection('invest'); return false;">Mutual Funds (Coming Soon)</a>
+          <a href="#" onclick="scrollToSection('invest'); return false;">Fixed Deposits (Coming Soon)</a>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="#" onclick="navigateTo('about'); return false;">About Us</a>
+          <a href="#">Security</a>
+          <a href="#">Careers</a>
+          <a href="#">Blog</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">RBI Guidelines</a>
+          <a href="#">SEBI Disclosure</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 SecureBank. All rights reserved. FSDC Registered.</span>
+        <span>🇮🇳 Made in India · Secured by JWT + Spring Security + Clerk</span>
+      </div>
+    </footer>
+  </div><!-- /home -->
+
+
+  <!-- ================================================================
+       PAGE: SIGN IN
+       ================================================================ -->
+  <div data-page="login">
+    <div class="auth-page">
+      <div class="auth-left">
+        <div class="auth-left-content">
+          <div class="brand" style="margin-bottom:2rem; cursor:default;">
+            <div class="brand-logo"></div>
+            <div class="brand-name" style="color:#fff;">Secure<span style="color:var(--accent-light);">Bank</span></div>
+          </div>
+          <h2>Welcome back.<br>Sign in securely.</h2>
+          <p>Use your email OTP or Google account to access your banking dashboard in seconds.</p>
+          <div class="auth-feature-list">
+            <div class="auth-feature"><span class="auth-feature-icon">🔒</span><span>No passwords — secure OTP via email</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">⚡</span><span>Instant access to your account</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">🛡️</span><span>Bank-grade security powered by Clerk</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="auth-right">
+        <h1>Sign In</h1>
+        <p class="auth-subtitle">Don't have an account? <a href="#" onclick="navigateTo('signup'); return false;">Open one for free →</a></p>
+
+        <!-- Clerk Sign-In Mount Point -->
+        <div id="clerkSignInMount" style="min-height:80px; display:flex; align-items:center; justify-content:center;">
+          <div style="color:var(--gray-400); font-size:.85rem;">Loading secure login…</div>
+        </div>
+
+        <div class="auth-divider" id="loginDividerOr">or</div>
+
+        <!-- Admin Login -->
+        <button class="clerk-btn" onclick="showAdminLogin()" id="btnShowAdmin">
+          <span class="clerk-btn-icon">🔐</span>
+          <span>Sign in as Administrator</span>
+        </button>
+
+        <div id="adminLoginForm" style="display:none; margin-top:1.25rem;">
+          <div class="portal-divider" style="font-size:.8rem; font-weight:700; color:var(--gray-500); text-align:center; margin-bottom:1rem;">ADMIN CREDENTIALS</div>
+          <form onsubmit="handleAdminLogin(event)">
+            <div class="form-group">
+              <label for="adminEmail">Email Address</label>
+              <input type="email" id="adminEmail" class="form-input" placeholder="admin@bank.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+              <label for="adminPassword">Password</label>
+              <input type="password" id="adminPassword" class="form-input" placeholder="Enter password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="adminLoginBtn">Sign In as Admin</button>
+            <button type="button" class="btn btn-secondary btn-block" style="margin-top:.5rem;" onclick="hideAdminLogin()">← Cancel</button>
+          </form>
+        </div>
+
+        <div class="auth-divider">or</div>
+
+        <!-- Demo / Guest Access -->
+        <button class="clerk-btn" onclick="showDemoLogin()" id="btnShowDemo">
+          <span class="clerk-btn-icon">🎭</span>
+          <span>Demo / Guest Access (no signup needed)</span>
+        </button>
+        <div id="demoLoginForm" style="display:none; margin-top:1rem;">
+          <form onsubmit="handleDemoLogin(event)">
+            <div class="form-group">
+              <label for="demoName">Your Name</label>
+              <input type="text" id="demoName" class="form-input" placeholder="e.g. Aryan Sharma" required>
+            </div>
+            <div class="form-group">
+              <label for="demoEmail">Email Address</label>
+              <input type="email" id="demoEmail" class="form-input" placeholder="you@example.com" required>
+            </div>
+            <div class="info-box">
+              <span>ℹ️</span> Demo accounts get an auto-assigned phone number. For a real phone number, use Clerk sign-up above.
+            </div>
+            <button type="submit" class="btn btn-secondary btn-block" id="demoLoginBtn">Enter Demo Mode</button>
+            <button type="button" class="btn btn-ghost btn-block" style="margin-top:.4rem;" onclick="hideDemoLogin()">← Back</button>
+          </form>
+        </div>
+
+        <p style="font-size:.75rem; color:var(--gray-400); margin-top:1.5rem; text-align:center;">
+          By signing in, you agree to our <a href="#" style="color:var(--primary);">Terms of Service</a> and <a href="#" style="color:var(--primary);">Privacy Policy</a>.
+        </p>
+      </div>
+    </div>
+  </div><!-- /login -->
+
+
+  <!-- ================================================================
+       PAGE: SIGN UP
+       ================================================================ -->
+  <div data-page="signup">
+    <div class="auth-page">
+      <div class="auth-left">
+        <div class="auth-left-content">
+          <div class="brand" style="margin-bottom:2rem; cursor:default;">
+            <div class="brand-logo"></div>
+            <div class="brand-name" style="color:#fff;">Secure<span style="color:var(--accent-light);">Bank</span></div>
+          </div>
+          <h2>Open your free<br>account today.</h2>
+          <p>Join thousands of Indians who trust SecureBank for their daily banking needs.</p>
+          <div class="auth-feature-list">
+            <div class="auth-feature"><span class="auth-feature-icon">✅</span><span>Zero balance account — no minimum required</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">📱</span><span>Instant transfers using your phone number</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">🔐</span><span>Secured by Clerk + JWT + Spring Security</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">⚡</span><span>Account ready in under 2 minutes</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="auth-right">
+        <h1>Open Free Account</h1>
+        <p class="auth-subtitle">Already have an account? <a href="#" onclick="navigateTo('login'); return false;">Sign in →</a></p>
+
+        <!-- Clerk Sign-Up Mount Point -->
+        <div id="clerkSignUpMount" style="min-height:80px; display:flex; align-items:center; justify-content:center;">
+          <div style="color:var(--gray-400); font-size:.85rem;">Loading secure sign-up…</div>
+        </div>
+
+        <p style="font-size:.75rem; color:var(--gray-400); margin-top:1.5rem; text-align:center;">
+          By creating an account, you agree to our <a href="#" style="color:var(--primary);">Terms of Service</a> and <a href="#" style="color:var(--primary);">Privacy Policy</a>.
+        </p>
+      </div>
+    </div>
+  </div><!-- /signup -->
+
+
+  <!-- ================================================================
+       PAGE: ABOUT
+       ================================================================ -->
+  <div data-page="about">
+    <div class="about-wrapper">
+      <div class="about-hero">
+        <h1>About SecureBank</h1>
+        <p>A full-stack digital banking platform built with modern Java &amp; Spring ecosystem, demonstrating enterprise-grade security, real-time transactions, and clean architecture.</p>
+      </div>
+      <div class="card" style="margin-bottom:1rem;">
+        <div class="card-header"><span class="card-title">Tech Stack</span></div>
+        <p style="color:var(--gray-500); font-size:.9rem; line-height:1.9;">
+          <strong style="color:var(--gray-900);">Backend:</strong> Spring Boot 4.1, Spring Security, Spring Data JPA, Hibernate ORM<br>
+          <strong style="color:var(--gray-900);">Database:</strong> MySQL 9.0 with Hibernate auto-DDL<br>
+          <strong style="color:var(--gray-900);">Auth:</strong> Clerk (email OTP + Google) → JWT tokens (jjwt 0.11) + Spring Security<br>
+          <strong style="color:var(--gray-900);">Frontend:</strong> Vanilla HTML5, CSS3, ES6+ JavaScript (no framework)<br>
+          <strong style="color:var(--gray-900);">Security:</strong> BCrypt password hashing, CORS config, stateless sessions<br>
+          <strong style="color:var(--gray-900);">APIs:</strong> RESTful endpoints with OpenAPI / Swagger UI
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Features</span></div>
+        <ul style="color:var(--gray-500); font-size:.9rem; line-height:2; padding-left:1.25rem;">
+          <li>Clerk-powered authentication with email OTP — separate sign-in and sign-up flows</li>
+          <li>User-provided phone number onboarding — used as unique transfer ID</li>
+          <li>Deposit &amp; Withdraw with full transaction history</li>
+          <li>Peer-to-peer instant transfer via phone number</li>
+          <li>Admin dashboard with account management (block/unblock/close)</li>
+          <li>JWT-based stateless authentication with role-based access</li>
+          <li>Global exception handling with proper HTTP status codes</li>
+          <li>Real-time balance and transaction tracking</li>
+        </ul>
+      </div>
+      <button class="btn btn-secondary" style="margin-top:1.5rem;" onclick="navigateTo('home')">← Back to Home</button>
+    </div>
+  </div><!-- /about -->
+
+
+  <!-- ================================================================
+       PAGE: CUSTOMER DASHBOARD
+       ================================================================ -->
+  <div data-page="customer">
+    <div class="dashboard-layout">
+      <!-- Sidebar -->
+      <aside class="dashboard-sidebar">
+        <div class="sidebar-profile">
+          <div class="sidebar-avatar" id="sidebarAvatar">?</div>
+          <div class="sidebar-name" id="sidebarName">—</div>
+          <div class="sidebar-email" id="sidebarEmail">—</div>
+        </div>
+        <div class="sidebar-item active" onclick="showDashSection('overview')" id="nav-overview">
+          <span class="sidebar-item-icon">📊</span> Overview
+        </div>
+        <div class="sidebar-item" onclick="showDashSection('deposit')" id="nav-deposit">
+          <span class="sidebar-item-icon">💰</span> Deposit
+        </div>
+        <div class="sidebar-item" onclick="showDashSection('withdraw')" id="nav-withdraw">
+          <span class="sidebar-item-icon">🏧</span> Withdraw
+        </div>
+        <div class="sidebar-item" onclick="showDashSection('transfer')" id="nav-transfer">
+          <span class="sidebar-item-icon">⚡</span> Send Money
+        </div>
+        <div class="sidebar-item" onclick="showDashSection('history')" id="nav-history">
+          <span class="sidebar-item-icon">📜</span> History
+        </div>
+        <div class="sidebar-spacer"></div>
+        <div class="sidebar-item sidebar-signout" onclick="handleSignOut()">
+          <span class="sidebar-item-icon">🚪</span> Sign Out
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="dashboard-main">
+
+        <!-- OVERVIEW SECTION -->
+        <div id="dashSection-overview">
+          <div class="page-header">
+            <h1 id="customerGreeting">Welcome back! 👋</h1>
+            <p>Your real-time banking dashboard</p>
+          </div>
+
+          <!-- Balance Hero Card -->
+          <div class="balance-hero">
+            <div class="balance-hero-top">
+              <div>
+                <div class="balance-label">Available Balance</div>
+                <div class="balance-amount" id="custBalance">₹0.00</div>
+                <div class="balance-status">
+                  <span class="status-dot"></span>
+                  <span id="custAccountStatus">ACTIVE</span>
+                  <span style="opacity:.4; margin: 0 .4rem;">|</span>
+                  <span class="balance-account-id" id="custAccountIdChip">ACC #—</span>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div class="balance-label" style="margin-bottom:.4rem;">Transfer Phone No.</div>
+                <div class="balance-phone-badge">
+                  📱 <span id="custPhoneNumber">—</span>
+                </div>
+                <div class="phone-tip">Share this to receive money</div>
+              </div>
+            </div>
+            <div class="balance-hero-bottom">
+              <div class="balance-stat">
+                <div class="balance-stat-label">Account Holder</div>
+                <div class="balance-stat-val" id="custHolderName">—</div>
+              </div>
+              <div class="balance-stat">
+                <div class="balance-stat-label">Total Deposited</div>
+                <div class="balance-stat-val positive" id="custTotalDeposits">₹0.00</div>
+              </div>
+              <div class="balance-stat">
+                <div class="balance-stat-label">Total Withdrawn</div>
+                <div class="balance-stat-val negative" id="custTotalWithdrawals">₹0.00</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Actions -->
+          <div class="dash-grid" style="margin-bottom:1.25rem;">
+            <button class="btn btn-success btn-lg" onclick="showDashSection('deposit')" style="border-radius:var(--radius-lg); height:80px;">
+              💰 Deposit Funds
+            </button>
+            <button class="btn btn-danger btn-lg" onclick="showDashSection('withdraw')" style="border-radius:var(--radius-lg); height:80px;">
+              🏧 Withdraw Funds
+            </button>
+          </div>
+          <button class="btn btn-primary btn-block btn-lg" onclick="showDashSection('transfer')" style="border-radius:var(--radius-lg); height:60px; margin-bottom:1.5rem;">
+            ⚡ Send Money Instantly
+          </button>
+
+          <!-- Recent Transactions -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Recent Transactions</span>
+              <button class="btn btn-secondary btn-sm" onclick="loadCustomerDashboard()">↻ Refresh</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table" id="custTxTable">
+                <thead>
+                  <tr><th>Type</th><th>Amount</th><th>Status</th><th>Date &amp; Time</th><th>Remarks</th></tr>
+                </thead>
+                <tbody id="custTxBody">
+                  <tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📭</div><p>No transactions yet — deposit to get started!</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /overview -->
+
+        <!-- DEPOSIT SECTION -->
+        <div id="dashSection-deposit" style="display:none;">
+          <div class="page-header">
+            <h1>💰 Deposit Funds</h1>
+            <p>Add money to your SecureBank account</p>
+          </div>
+          <div class="card" style="max-width:480px;">
+            <form id="quickDepositForm" onsubmit="handleQuickDeposit(event)">
+              <div class="form-group">
+                <label for="depositAmount">Amount (₹)</label>
+                <input type="number" id="depositAmount" class="form-input" min="1" step="1" required placeholder="Enter amount" style="font-size:1.2rem;">
+              </div>
+              <div class="quick-amounts">
+                <button type="button" class="quick-amt-btn" onclick="setAmount('depositAmount',500)">₹500</button>
+                <button type="button" class="quick-amt-btn" onclick="setAmount('depositAmount',1000)">₹1K</button>
+                <button type="button" class="quick-amt-btn" onclick="setAmount('depositAmount',5000)">₹5K</button>
+                <button type="button" class="quick-amt-btn" onclick="setAmount('depositAmount',10000)">₹10K</button>
+              </div>
+              <button type="submit" class="btn btn-success btn-block btn-lg" id="depositBtn" style="margin-top:1rem;">
+                💰 Deposit Now
+              </button>
+            </form>
+          </div>
+        </div><!-- /deposit -->
+
+        <!-- WITHDRAW SECTION -->
+        <div id="dashSection-withdraw" style="display:none;">
+          <div class="page-header">
+            <h1>🏧 Withdraw Funds</h1>
+            <p>Withdraw money from your SecureBank account</p>
+          </div>
+          <div class="card" style="max-width:480px;">
+            <form id="quickWithdrawForm" onsubmit="handleQuickWithdraw(event)">
+              <div class="form-group">
+                <label for="withdrawAmount">Amount (₹)</label>
+                <input type="number" id="withdrawAmount" class="form-input" min="1" step="1" required placeholder="Enter amount" style="font-size:1.2rem;">
+              </div>
+              <div class="quick-amounts">
+                <button type="button" class="quick-amt-btn" onclick="setAmount('withdrawAmount',500)">₹500</button>
+                <button type="button" class="quick-amt-btn" onclick="setAmount('withdrawAmount',1000)">₹1K</button>
+                <button type="button" class="quick-amt-btn" onclick="setAmount('withdrawAmount',5000)">₹5K</button>
+                <button type="button" class="quick-amt-btn" onclick="setAmount('withdrawAmount',10000)">₹10K</button>
+              </div>
+              <button type="submit" class="btn btn-danger btn-block btn-lg" id="withdrawBtn" style="margin-top:1rem;">
+                🏧 Withdraw Now
+              </button>
+            </form>
+          </div>
+        </div><!-- /withdraw -->
+
+        <!-- TRANSFER SECTION -->
+        <div id="dashSection-transfer" style="display:none;">
+          <div class="page-header">
+            <h1>⚡ Send Money</h1>
+            <p>Transfer funds instantly using recipient's phone number</p>
+          </div>
+          <div class="card" style="max-width:480px;">
+            <div class="transfer-hint">
+              <span>ℹ️</span> Enter the receiver's 10-digit phone number registered with SecureBank.
+            </div>
+            <form id="transferForm" onsubmit="handleTransfer(event)">
+              <div class="form-group">
+                <label for="receiverPhone">Receiver's Phone Number</label>
+                <input type="tel" id="receiverPhone" class="form-input" placeholder="10-digit phone number"
+                       required pattern="\d{10}" maxlength="10" style="font-family:monospace; letter-spacing:.1em; font-size:1.1rem;">
+              </div>
+              <div class="form-group">
+                <label for="transferAmount">Amount (₹)</label>
+                <input type="number" id="transferAmount" class="form-input" placeholder="Enter amount" min="1" step="1" required style="font-size:1.2rem;">
+              </div>
+              <div class="form-group">
+                <label for="transferRemarks">Remarks <span style="color:var(--gray-400);font-weight:400">(optional)</span></label>
+                <input type="text" id="transferRemarks" class="form-input" placeholder="e.g. Rent, Dinner, Family...">
+              </div>
+              <button type="submit" class="btn btn-primary btn-block btn-lg" id="transferBtn">
+                ⚡ Transfer Instantly
+              </button>
+            </form>
+          </div>
+        </div><!-- /transfer -->
+
+        <!-- HISTORY SECTION -->
+        <div id="dashSection-history" style="display:none;">
+          <div class="page-header">
+            <h1>📜 Transaction History</h1>
+            <p>All your past transactions</p>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">All Transactions</span>
+              <button class="btn btn-secondary btn-sm" onclick="loadFullHistory()">↻ Refresh</button>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr><th>Type</th><th>Amount</th><th>Status</th><th>Date &amp; Time</th><th>Remarks</th></tr>
+                </thead>
+                <tbody id="historyTxBody">
+                  <tr><td colspan="5"><div class="empty-state"><p>Loading transactions...</p></div></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /history -->
+
+      </main>
+    </div>
+  </div><!-- /customer -->
+
+
+  <!-- ================================================================
+       PAGE: ADMIN DASHBOARD
+       ================================================================ -->
+  <div data-page="admin">
+    <div class="admin-layout">
+      <div class="admin-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h1>Admin Control Panel 🔐</h1>
+            <p>System-wide metrics, account management, and transaction oversight</p>
+          </div>
+          <button class="btn btn-secondary" onclick="handleSignOut()">Sign Out 🚪</button>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="admin-stats-grid">
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon">💼</div>
+          <div class="admin-stat-label">Total Money in System</div>
+          <div class="admin-stat-value gold" id="adminTotalMoney">₹0.00</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon">👥</div>
+          <div class="admin-stat-label">Total Users</div>
+          <div class="admin-stat-value navy" id="adminTotalUsers">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon">🏦</div>
+          <div class="admin-stat-label">Total Accounts</div>
+          <div class="admin-stat-value green" id="adminTotalAccounts">0</div>
+        </div>
+        <div class="admin-stat-card">
+          <div class="admin-stat-icon">📊</div>
+          <div class="admin-stat-label">Total Transactions</div>
+          <div class="admin-stat-value red" id="adminTotalTransactions">0</div>
+        </div>
+      </div>
+
+      <!-- Top Holders -->
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-header">
+          <span class="card-title">Top Account Holders 🏆</span>
+          <button class="btn btn-secondary btn-sm" onclick="loadAdminDashboard()">↻ Refresh</button>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Balance</th></tr></thead>
+            <tbody id="adminTopHoldersBody">
+              <tr><td colspan="5"><div class="empty-state"><p>Loading...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- All Accounts -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">All Accounts</span>
+          <span style="font-size:.8rem; color:var(--gray-400);">Manage status, block or close accounts</span>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead><tr><th>ID</th><th>Holder</th><th>Email</th><th>Phone</th><th>Balance</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="adminAccountsBody">
+              <tr><td colspan="7"><div class="empty-state"><p>Loading accounts...</p></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div><!-- /admin -->
+
+
+  <script src="app.js"></script>
+</body>
+</html>

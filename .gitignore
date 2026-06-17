@@ -1,0 +1,62 @@
+# =================================================================
+# SecureBank — .gitignore
+# Version control rules for Maven/Java, IDEs, OS files, and logs.
+# =================================================================
+
+# ── 1. Build & Compilation Directories (Auto-Generated) ──────────
+target/
+build/
+bin/
+*.class
+*.war
+*.ear
+*.jar
+
+# Keep main/test source code files even if directories are named build/target
+!**/src/main/**/target/
+!**/src/test/**/target/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# ── 2. Help/Documentation & Log Files ─────────────────────────────
+HELP.md
+*.log
+logs/
+temp/
+tmp/
+
+# ── 3. Maven Settings & Wrappers ──────────────────────────────────
+.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.properties
+# Note: Keep the script files mvnw and mvnw.cmd in git so others can run maven!
+
+# ── 4. Spring Tool Suite (STS) Settings ───────────────────────────
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+
+# ── 5. IntelliJ IDEA IDE Settings ─────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# ── 6. Visual Studio Code Settings ────────────────────────────────
+.vscode/
+
+# ── 7. Operating System Files ─────────────────────────────────────
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ── 8. Environment Variables / Secrets (CRITICAL) ─────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

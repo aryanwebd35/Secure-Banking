@@ -1,29 +1,23 @@
 /* =================================================================
-   SecureBank — app.js  (v2)
-   Auth: Clerk v5 sign-in / sign-up (OTP) + Admin + Demo guest
-   Features: Dashboard, Deposit, Withdraw, Transfer, Admin CRUD
+   SecureBank — app.js
+   Auth: Standard email + password (JWT) — no Clerk, no OTP
+   Features: Register, Login, Admin Login, Dashboard, Deposit, Withdraw, Transfer
    ================================================================= */
 
 'use strict';
 
-// ── Auth State ──────────────────────────────────────────────────
+// ── Auth State (persisted in localStorage) ──────────────────────
 let jwtToken  = localStorage.getItem('bank_jwt');
 let userRole  = localStorage.getItem('bank_role') || 'USER';
 let userEmail = localStorage.getItem('bank_email') || '';
 
-// ── Clerk instance (loaded async) ──────────────────────────────
-let clerk = null;
-
-// ── PUBLISHABLE KEY ─────────────────────────────────────────────
-const CLERK_PUBLISHABLE_KEY = 'pk_test_bWVhc3VyZWQtYXNwLTY3LmNsZXJrLmFjY291bnRzLmRldiQ';
-
 // =================================================================
-//  ROUTER — data-page attribute based
+//  ROUTER — data-page attribute based SPA routing
 // =================================================================
 const PAGES = ['home', 'login', 'signup', 'about', 'customer', 'admin'];
 
 function navigateTo(pageId) {
-  // If already logged in and trying to go to login/signup, redirect
+  // If already logged in and trying to go to login/signup, redirect to dashboard
   if (jwtToken && (pageId === 'login' || pageId === 'signup')) {
     pageId = (userRole === 'ADMIN') ? 'admin' : 'customer';
   }
@@ -38,19 +32,17 @@ function navigateTo(pageId) {
   const target = document.querySelector(`[data-page="${pageId}"]`);
   if (target) { target.classList.add('active-page'); target.style.display = 'block'; }
 
-  // Nav active state
+  // Update nav active state
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  if (pageId === 'home') document.getElementById('navHome')?.classList.add('active');
+  if (pageId === 'home')  document.getElementById('navHome')?.classList.add('active');
   if (pageId === 'about') document.getElementById('navAbout')?.classList.add('active');
 
-  // Show/hide main nav vs auth header
+  // Update header
   renderHeader();
 
-  // Trigger page-specific init
-  if (pageId === 'customer') { loadCustomerDashboard(); }
-  if (pageId === 'admin')    { loadAdminDashboard(); }
-  if (pageId === 'login')    { mountClerkSignIn(); }
-  if (pageId === 'signup')   { mountClerkSignUp(); }
+  // Page-specific init
+  if (pageId === 'customer') loadCustomerDashboard();
+  if (pageId === 'admin')    loadAdminDashboard();
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -66,214 +58,104 @@ function scrollToSection(id) {
 // ── Dashboard sub-sections ───────────────────────────────────────
 function showDashSection(section) {
   ['overview', 'deposit', 'withdraw', 'transfer', 'history'].forEach(s => {
-    const el = document.getElementById(`dashSection-${s}`);
-    if (el) el.style.display = (s === section) ? 'block' : 'none';
+    const el  = document.getElementById(`dashSection-${s}`);
     const nav = document.getElementById(`nav-${s}`);
-    if (nav) { nav.classList.toggle('active', s === section); }
+    if (el)  el.style.display = (s === section) ? 'block' : 'none';
+    if (nav) nav.classList.toggle('active', s === section);
   });
   if (section === 'history') loadFullHistory();
 }
 
 // =================================================================
-//  CLERK v5 — Sign-In and Sign-Up mount
+//  AUTH — Register (POST /api/auth/register)
 // =================================================================
-async function initClerk() {
+async function handleRegister(e) {
+  e.preventDefault();
+  const name        = document.getElementById('regName').value.trim();
+  const email       = document.getElementById('regEmail').value.trim().toLowerCase();
+  const password    = document.getElementById('regPassword').value;
+  const phoneNumber = document.getElementById('regPhone').value.trim();
+  const btn         = document.getElementById('regBtn');
+  const errEl       = document.getElementById('regError');
+
+  // Clear previous error
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> Creating account…';
+
   try {
-    // Wait for Clerk global to be available (loaded async)
-    const clerkInstance = await waitForClerk();
-    if (!clerkInstance) {
-      console.warn('Clerk SDK not available — OTP login will not work. Email demo login is still available.');
-      updateClerkMountFallback();
-      return;
-    }
-
-    clerk = clerkInstance;
-
-    // Load Clerk with publishable key
-    await clerk.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
-    console.info('Clerk v5 loaded successfully');
-
-    // If user already has an active Clerk session, sync with backend
-    if (clerk.session && !jwtToken) {
-      console.info('Existing Clerk session found — syncing with backend');
-      await syncClerkSession();
-    }
-
-    // Listen for session changes (sign-in / sign-out via Clerk)
-    clerk.addListener(async ({ session }) => {
-      if (session && !jwtToken) {
-        await syncClerkSession();
-      }
-    });
-
-  } catch (err) {
-    console.warn('Clerk init error:', err.message);
-    updateClerkMountFallback();
-  }
-}
-
-function waitForClerk(timeoutMs = 8000) {
-  return new Promise((resolve) => {
-    if (window.Clerk) return resolve(window.Clerk);
-    const start = Date.now();
-    const check = setInterval(() => {
-      if (window.Clerk) { clearInterval(check); resolve(window.Clerk); }
-      else if (Date.now() - start > timeoutMs) { clearInterval(check); resolve(null); }
-    }, 200);
-  });
-}
-
-function updateClerkMountFallback() {
-  ['clerkSignInMount', 'clerkSignUpMount'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) {
-      el.innerHTML = `
-        <div style="text-align:center; padding:1rem; color:var(--gray-500); font-size:.85rem;">
-          <div style="font-size:1.25rem; margin-bottom:.4rem;">⚠️</div>
-          Clerk authentication unavailable in this environment.<br>
-          <strong>Use Demo Access or Admin Login below.</strong>
-        </div>`;
-    }
-  });
-}
-
-// Mount Clerk's embedded sign-in widget into the login page
-function mountClerkSignIn() {
-  if (!clerk) {
-    // Clerk might not have loaded yet — try again after a short delay
-    setTimeout(() => { if (clerk) mountClerkSignIn(); else updateClerkMountFallback(); }, 1000);
-    return;
-  }
-  const el = document.getElementById('clerkSignInMount');
-  if (!el) return;
-  el.innerHTML = ''; // Clear placeholder
-  try {
-    clerk.mountSignIn(el, {
-      routing: 'virtual',
-      afterSignInUrl: '/',
-      afterSignUpUrl: '/',
-    });
-  } catch (err) {
-    console.warn('Clerk mountSignIn error:', err.message);
-    updateClerkMountFallback();
-  }
-}
-
-// Mount Clerk's embedded sign-up widget into the signup page
-function mountClerkSignUp() {
-  if (!clerk) {
-    setTimeout(() => { if (clerk) mountClerkSignUp(); else updateClerkMountFallback(); }, 1000);
-    return;
-  }
-  const el = document.getElementById('clerkSignUpMount');
-  if (!el) return;
-  el.innerHTML = '';
-  try {
-    clerk.mountSignUp(el, {
-      routing: 'virtual',
-      afterSignUpUrl: '/',
-      afterSignInUrl: '/',
-    });
-  } catch (err) {
-    console.warn('Clerk mountSignUp error:', err.message);
-    updateClerkMountFallback();
-  }
-}
-
-// After Clerk auth completes, exchange Clerk token for backend JWT
-async function syncClerkSession() {
-  try {
-    if (!clerk || !clerk.session) return;
-    const clerkToken = await clerk.session.getToken();
-    if (!clerkToken) return;
-
-    const res = await fetch('/api/auth/clerk-login', {
+    const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ clerkToken }),
+      body: JSON.stringify({ name, email, password, phoneNumber }),
     });
 
+    if (res.status === 409) {
+      throw new Error('An account with this email or phone number already exists.');
+    }
     if (!res.ok) {
-      showToast('Authentication failed — please try again.', 'error');
-      return;
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || `Registration failed (${res.status}). Check your details.`);
     }
 
     const data = await res.json();
     saveSession(data.token, 'USER', data.email);
+    showToast(`Welcome to SecureBank, ${name}! 🎉`, 'success');
     renderHeader();
-
-    if (data.needsPhoneSetup) {
-      // Show phone setup modal before navigating to dashboard
-      showPhoneSetupModal();
-    } else {
-      showToast(`Welcome back, ${data.email.split('@')[0]}! 🎉`, 'success');
-      navigateTo('customer');
-    }
-  } catch (err) {
-    console.error('Clerk session sync error:', err);
-    showToast('Failed to sync authentication. Please try again.', 'error');
-  }
-}
-
-// =================================================================
-//  PHONE SETUP MODAL
-// =================================================================
-function showPhoneSetupModal() {
-  const modal = document.getElementById('phoneSetupModal');
-  if (modal) modal.style.display = 'flex';
-}
-function hidePhoneSetupModal() {
-  const modal = document.getElementById('phoneSetupModal');
-  if (modal) modal.style.display = 'none';
-}
-
-async function handlePhoneSetup(e) {
-  e.preventDefault();
-  const phone = document.getElementById('setupPhone').value.trim();
-  const btn   = document.getElementById('phoneSetupBtn');
-  const errEl = document.getElementById('phoneSetupError');
-
-  if (!/^\d{10}$/.test(phone)) {
-    errEl.textContent = 'Please enter exactly 10 digits.';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span> Setting up account…';
-  errEl.style.display = 'none';
-
-  try {
-    const res = await fetch('/api/auth/setup-phone', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${jwtToken}`,
-      },
-      body: JSON.stringify({ phoneNumber: phone }),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'That phone number may already be in use. Try a different one.');
-    }
-
-    const data = await res.json();
-    saveSession(data.token, 'USER', data.email);
-    hidePhoneSetupModal();
-    showToast('Account activated! Welcome to SecureBank 🎉', 'success');
     navigateTo('customer');
   } catch (err) {
     errEl.textContent = err.message;
     errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Confirm & Open My Account →';
+    btn.textContent = 'Open Free Account →';
   }
 }
 
 // =================================================================
-//  ADMIN LOGIN
+//  AUTH — Login (POST /api/auth/login)
+// =================================================================
+async function handleLogin(e) {
+  e.preventDefault();
+  const email    = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  const btn      = document.getElementById('loginBtn');
+  const errEl    = document.getElementById('loginError');
+
+  errEl.style.display = 'none';
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading-spinner"></span> Signing in…';
+
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (res.status === 401) {
+      throw new Error('Invalid email or password. Please try again.');
+    }
+    if (!res.ok) throw new Error(`Login failed (${res.status}). Please try again.`);
+
+    const data = await res.json();
+    saveSession(data.token, 'USER', data.email);
+    showToast(`Welcome back, ${email.split('@')[0]}! 👋`, 'success');
+    renderHeader();
+    navigateTo('customer');
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In →';
+  }
+}
+
+// =================================================================
+//  AUTH — Admin Login (POST /api/auth/admin/login)
 // =================================================================
 function showAdminLogin() {
   document.getElementById('adminLoginForm').style.display = 'block';
@@ -289,6 +171,9 @@ async function handleAdminLogin(e) {
   const email    = document.getElementById('adminEmail').value.trim();
   const password = document.getElementById('adminPassword').value;
   const btn      = document.getElementById('adminLoginBtn');
+  const errEl    = document.getElementById('adminLoginError');
+
+  errEl.style.display = 'none';
   btn.disabled = true;
   btn.innerHTML = '<span class="loading-spinner"></span> Signing in…';
 
@@ -305,53 +190,11 @@ async function handleAdminLogin(e) {
     renderHeader();
     navigateTo('admin');
   } catch (err) {
-    showToast(err.message, 'error');
+    errEl.textContent = err.message;
+    errEl.style.display = 'block';
   } finally {
     btn.disabled = false;
     btn.textContent = 'Sign In as Admin';
-  }
-}
-
-// =================================================================
-//  DEMO LOGIN
-// =================================================================
-function showDemoLogin() {
-  document.getElementById('demoLoginForm').style.display = 'block';
-  document.getElementById('btnShowDemo').style.display = 'none';
-}
-function hideDemoLogin() {
-  document.getElementById('demoLoginForm').style.display = 'none';
-  document.getElementById('btnShowDemo').style.display = '';
-}
-
-async function handleDemoLogin(e) {
-  e.preventDefault();
-  const name  = document.getElementById('demoName').value.trim();
-  const email = document.getElementById('demoEmail').value.trim().toLowerCase();
-  const btn   = document.getElementById('demoLoginBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="loading-spinner"></span> Entering demo…';
-
-  try {
-    const res = await fetch('/api/auth/simulated-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, name }),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'Demo login failed. Please try again.');
-    }
-    const data = await res.json();
-    saveSession(data.token, 'USER', data.email);
-    showToast(`Welcome, ${name}! (Demo mode) 🎭`, 'success');
-    renderHeader();
-    navigateTo('customer');
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Enter Demo Mode';
   }
 }
 
@@ -372,7 +215,6 @@ function clearSession() {
 }
 function handleSignOut() {
   clearSession();
-  if (clerk && clerk.session) clerk.signOut();
   showToast('Signed out successfully.', 'success');
   renderHeader();
   navigateTo('home');
@@ -382,8 +224,8 @@ function handleSignOut() {
 //  HEADER RENDER
 // =================================================================
 function renderHeader() {
-  const mainNav       = document.getElementById('mainNav');
-  const headerStatus  = document.getElementById('headerAuthStatus');
+  const mainNav      = document.getElementById('mainNav');
+  const headerStatus = document.getElementById('headerAuthStatus');
   if (!headerStatus) return;
   headerStatus.innerHTML = '';
 
@@ -421,9 +263,8 @@ function renderHeader() {
 const fmt = (n) => `₹${parseFloat(n || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 async function loadCustomerDashboard() {
-  // Update sidebar info
   const name = userEmail ? userEmail.split('@')[0] : 'User';
-  const cap = name.charAt(0).toUpperCase() + name.slice(1);
+  const cap  = name.charAt(0).toUpperCase() + name.slice(1);
 
   const avatar = document.getElementById('sidebarAvatar');
   if (avatar) avatar.textContent = cap.charAt(0).toUpperCase();
@@ -431,7 +272,6 @@ async function loadCustomerDashboard() {
   if (sName) sName.textContent = cap;
   const sEmail = document.getElementById('sidebarEmail');
   if (sEmail) sEmail.textContent = userEmail;
-
   const greet = document.getElementById('customerGreeting');
   if (greet) greet.textContent = `Welcome back, ${cap}! 👋`;
 
@@ -439,32 +279,27 @@ async function loadCustomerDashboard() {
     const res = await fetch('/dashboard', {
       headers: { 'Authorization': `Bearer ${jwtToken}` },
     });
-
     if (res.status === 401 || res.status === 403) { handleSignOut(); return; }
     if (!res.ok) throw new Error(`Dashboard error (${res.status})`);
 
     const data = await res.json();
 
-    // Balance card
-    const balEl = document.getElementById('custBalance');
-    if (balEl) balEl.textContent = fmt(data.accountBalance);
-
-    const depEl = document.getElementById('custTotalDeposits');
-    const witEl = document.getElementById('custTotalWithdrawals');
-    if (depEl) depEl.textContent = fmt(data.totalDeposits);
-    if (witEl) witEl.textContent = fmt(data.totalWithdrawals);
-
+    const balEl    = document.getElementById('custBalance');
+    const depEl    = document.getElementById('custTotalDeposits');
+    const witEl    = document.getElementById('custTotalWithdrawals');
     const holderEl = document.getElementById('custHolderName');
     const phoneEl  = document.getElementById('custPhoneNumber');
     const acnoEl   = document.getElementById('custAccountIdChip');
     const statusEl = document.getElementById('custAccountStatus');
 
+    if (balEl)    balEl.textContent    = fmt(data.accountBalance);
+    if (depEl)    depEl.textContent    = fmt(data.totalDeposits);
+    if (witEl)    witEl.textContent    = fmt(data.totalWithdrawals);
     if (holderEl) holderEl.textContent = data.accountHolderName || cap;
     if (phoneEl)  phoneEl.textContent  = data.phoneNumber || '—';
     if (acnoEl)   acnoEl.textContent   = `ACC #${data.accountId || '—'}`;
     if (statusEl) statusEl.textContent = data.accountStatus || 'ACTIVE';
 
-    // Recent transactions table
     renderTransactionTable('custTxBody', data.recentTransactions);
 
   } catch (err) {
@@ -478,7 +313,7 @@ function renderTransactionTable(tbodyId, txns) {
   tbody.innerHTML = '';
 
   if (!txns || txns.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📭</div><p>No transactions yet — make your first deposit!</p></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📭</div><p>No transactions yet — deposit to get started!</p></div></td></tr>`;
     return;
   }
 
@@ -487,9 +322,9 @@ function renderTransactionTable(tbodyId, txns) {
     const badge     = tx.status === 'SUCCESS'
       ? '<span class="badge badge-green">✓ Success</span>'
       : '<span class="badge badge-red">✕ Failed</span>';
-    const prefix    = tx.transactionType === 'DEPOSIT' ? '+' : '-';
-    const dateStr   = tx.timestamp
-      ? new Date(tx.timestamp).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+    const prefix  = tx.transactionType === 'DEPOSIT' ? '+' : '-';
+    const dateStr = tx.timestamp
+      ? new Date(tx.timestamp).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       : '—';
     const tr = document.createElement('tr');
     tr.innerHTML = `
@@ -540,7 +375,6 @@ async function handleQuickDeposit(e) {
     }
     showToast(`${fmt(amount)} deposited successfully! 💰`, 'success');
     document.getElementById('depositAmount').value = '';
-    // Refresh overview
     await loadCustomerDashboard();
     showDashSection('overview');
   } catch (err) {
@@ -700,21 +534,18 @@ async function adminUpdateStatus(id, action) {
 }
 
 // =================================================================
-//  NOTIFY ME (SIP/MF)
+//  NOTIFY ME (SIP/MF coming soon features)
 // =================================================================
 function notifyMe(type) {
   const emailId = type === 'sip' ? 'sipEmail' : 'mfEmail';
   const email   = document.getElementById(emailId)?.value.trim();
-  if (!email || !email.includes('@')) {
-    showToast('Enter a valid email address.', 'error');
-    return;
-  }
+  if (!email || !email.includes('@')) { showToast('Enter a valid email address.', 'error'); return; }
   showToast(`You'll be notified at ${email} when ${type === 'sip' ? 'SIP' : 'Mutual Funds'} launches! 🚀`, 'success');
   document.getElementById(emailId).value = '';
 }
 
 // =================================================================
-//  TOAST
+//  TOAST NOTIFICATIONS
 // =================================================================
 function showToast(message, type = 'info') {
   const container = document.getElementById('toastContainer');
@@ -735,14 +566,10 @@ function showToast(message, type = 'info') {
 // =================================================================
 window.addEventListener('DOMContentLoaded', () => {
   renderHeader();
-
-  // Determine initial page
+  // Restore session: go to dashboard if already logged in, otherwise home
   if (jwtToken) {
     navigateTo(userRole === 'ADMIN' ? 'admin' : 'customer');
   } else {
     navigateTo('home');
   }
-
-  // Init Clerk in background (non-blocking)
-  initClerk();
 });

@@ -7,8 +7,7 @@
   <title>SecureBank — Smart Banking for India</title>
   <link rel="stylesheet" href="style.css">
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <!-- Clerk JS v5 — needed for proper sign-in/sign-up with OTP -->
-  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js" type="text/javascript" async></script>
+  <!-- Standard JWT auth — no third-party auth provider needed -->
 </head>
 <body>
 
@@ -35,31 +34,6 @@
 
   <!-- ===== TOAST CONTAINER ===== -->
   <div id="toastContainer"></div>
-
-  <!-- ===== PHONE SETUP MODAL ===== -->
-  <div id="phoneSetupModal" style="display:none;">
-    <div class="phone-setup-card">
-      <div class="phone-setup-icon">📱</div>
-      <h2>One Last Step!</h2>
-      <p>Enter your 10-digit mobile number. Others will use this to send you money instantly — like UPI but simpler.</p>
-      <form id="phoneSetupForm" onsubmit="handlePhoneSetup(event)">
-        <div class="form-group">
-          <label for="setupPhone">Your Mobile Number</label>
-          <input type="tel" id="setupPhone" class="form-input" placeholder="9876543210"
-                 pattern="\d{10}" maxlength="10" required autocomplete="tel"
-                 style="font-size:1.1rem; letter-spacing:.1em; font-family:monospace;">
-        </div>
-        <div class="info-box">
-          <span>ℹ️</span>
-          <span>This number is your unique transfer ID. Make sure it's correct — it can't be changed once set.</span>
-        </div>
-        <button type="submit" class="btn btn-primary btn-block" id="phoneSetupBtn">
-          Confirm & Open My Account →
-        </button>
-        <p id="phoneSetupError" style="color:var(--danger);font-size:.8rem;margin-top:.5rem;display:none;"></p>
-      </form>
-    </div>
-  </div>
 
   <!-- ================================================================
        PAGE: HOME
@@ -210,16 +184,16 @@
           <div class="step-card">
             <div class="step-number">01</div>
             <div class="step-content">
-              <h3>Sign Up with Clerk</h3>
-              <p>Click "Open Free Account" and sign up via email OTP or Google. Fast, secure, and passwordless.</p>
+              <h3>Create Your Account</h3>
+              <p>Click "Open Free Account", fill in your name, email, password and phone number. Done in under a minute.</p>
             </div>
           </div>
           <div class="step-arrow">→</div>
           <div class="step-card">
             <div class="step-number">02</div>
             <div class="step-content">
-              <h3>Set Your Phone Number</h3>
-              <p>Enter your real 10-digit mobile number. This becomes your unique transfer ID — others use it to send you money.</p>
+              <h3>Your Phone = Transfer ID</h3>
+              <p>Your 10-digit mobile number is your unique transfer ID. Others use it to send you money instantly.</p>
             </div>
           </div>
           <div class="step-arrow">→</div>
@@ -350,7 +324,7 @@
           </div>
           <div class="testimonial-card featured-testimonial">
             <div class="stars">★★★★★</div>
-            <p>"Clean UI, instant transactions, and the admin panel is excellent for monitoring. The Clerk sign-in with OTP is so smooth — love it!"</p>
+            <p>"Clean UI, instant transactions, and the admin panel is excellent for monitoring. The email + password login is smooth and secure — love it!"</p>
             <div class="testimonial-author">
               <div class="author-avatar gold-avatar">P</div>
               <div><strong>Priya Menon</strong><span>CA &amp; Financial Advisor, Mumbai</span></div>
@@ -385,7 +359,7 @@
             <div class="brand-logo"></div>
             <div class="brand-name">Secure<span>Bank</span></div>
           </div>
-          <p>A modern banking platform built on Spring Boot, Spring Security &amp; JWT. Enterprise-grade banking architecture with Clerk authentication.</p>
+          <p>A modern banking platform built on Spring Boot, Spring Security &amp; JWT. Enterprise-grade banking architecture with standard email + password authentication.</p>
         </div>
         <div class="footer-col">
           <h4>Products</h4>
@@ -411,7 +385,7 @@
       </div>
       <div class="footer-bottom">
         <span>© 2026 SecureBank. All rights reserved. FSDC Registered.</span>
-        <span>🇮🇳 Made in India · Secured by JWT + Spring Security + Clerk</span>
+        <span>🇮🇳 Made in India · Secured by JWT + BCrypt + Spring Security</span>
       </div>
     </footer>
   </div><!-- /home -->
@@ -429,11 +403,11 @@
             <div class="brand-name" style="color:#fff;">Secure<span style="color:var(--accent-light);">Bank</span></div>
           </div>
           <h2>Welcome back.<br>Sign in securely.</h2>
-          <p>Use your email OTP or Google account to access your banking dashboard in seconds.</p>
+          <p>Use your email and password to access your banking dashboard in seconds.</p>
           <div class="auth-feature-list">
-            <div class="auth-feature"><span class="auth-feature-icon">🔒</span><span>No passwords — secure OTP via email</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">🔒</span><span>Secured with BCrypt + JWT tokens</span></div>
             <div class="auth-feature"><span class="auth-feature-icon">⚡</span><span>Instant access to your account</span></div>
-            <div class="auth-feature"><span class="auth-feature-icon">🛡️</span><span>Bank-grade security powered by Clerk</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">🛡️</span><span>Bank-grade security powered by Spring Security</span></div>
           </div>
         </div>
       </div>
@@ -441,12 +415,21 @@
         <h1>Sign In</h1>
         <p class="auth-subtitle">Don't have an account? <a href="#" onclick="navigateTo('signup'); return false;">Open one for free →</a></p>
 
-        <!-- Clerk Sign-In Mount Point -->
-        <div id="clerkSignInMount" style="min-height:80px; display:flex; align-items:center; justify-content:center;">
-          <div style="color:var(--gray-400); font-size:.85rem;">Loading secure login…</div>
-        </div>
+        <!-- Standard Email + Password Login Form -->
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="loginEmail">Email Address</label>
+            <input type="email" id="loginEmail" class="form-input" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" required autocomplete="current-password">
+          </div>
+          <p id="loginError" style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;display:none;"></p>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">Sign In →</button>
+        </form>
 
-        <div class="auth-divider" id="loginDividerOr">or</div>
+        <div class="auth-divider">or</div>
 
         <!-- Admin Login -->
         <button class="clerk-btn" onclick="showAdminLogin()" id="btnShowAdmin">
@@ -458,40 +441,16 @@
           <div class="portal-divider" style="font-size:.8rem; font-weight:700; color:var(--gray-500); text-align:center; margin-bottom:1rem;">ADMIN CREDENTIALS</div>
           <form onsubmit="handleAdminLogin(event)">
             <div class="form-group">
-              <label for="adminEmail">Email Address</label>
+              <label for="adminEmail">Admin Email</label>
               <input type="email" id="adminEmail" class="form-input" placeholder="admin@bank.com" required autocomplete="email">
             </div>
             <div class="form-group">
-              <label for="adminPassword">Password</label>
-              <input type="password" id="adminPassword" class="form-input" placeholder="Enter password" required autocomplete="current-password">
+              <label for="adminPassword">Admin Password</label>
+              <input type="password" id="adminPassword" class="form-input" placeholder="Enter admin password" required autocomplete="current-password">
             </div>
+            <p id="adminLoginError" style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;display:none;"></p>
             <button type="submit" class="btn btn-primary btn-block" id="adminLoginBtn">Sign In as Admin</button>
             <button type="button" class="btn btn-secondary btn-block" style="margin-top:.5rem;" onclick="hideAdminLogin()">← Cancel</button>
-          </form>
-        </div>
-
-        <div class="auth-divider">or</div>
-
-        <!-- Demo / Guest Access -->
-        <button class="clerk-btn" onclick="showDemoLogin()" id="btnShowDemo">
-          <span class="clerk-btn-icon">🎭</span>
-          <span>Demo / Guest Access (no signup needed)</span>
-        </button>
-        <div id="demoLoginForm" style="display:none; margin-top:1rem;">
-          <form onsubmit="handleDemoLogin(event)">
-            <div class="form-group">
-              <label for="demoName">Your Name</label>
-              <input type="text" id="demoName" class="form-input" placeholder="e.g. Aryan Sharma" required>
-            </div>
-            <div class="form-group">
-              <label for="demoEmail">Email Address</label>
-              <input type="email" id="demoEmail" class="form-input" placeholder="you@example.com" required>
-            </div>
-            <div class="info-box">
-              <span>ℹ️</span> Demo accounts get an auto-assigned phone number. For a real phone number, use Clerk sign-up above.
-            </div>
-            <button type="submit" class="btn btn-secondary btn-block" id="demoLoginBtn">Enter Demo Mode</button>
-            <button type="button" class="btn btn-ghost btn-block" style="margin-top:.4rem;" onclick="hideDemoLogin()">← Back</button>
           </form>
         </div>
 
@@ -518,8 +477,8 @@
           <p>Join thousands of Indians who trust SecureBank for their daily banking needs.</p>
           <div class="auth-feature-list">
             <div class="auth-feature"><span class="auth-feature-icon">✅</span><span>Zero balance account — no minimum required</span></div>
-            <div class="auth-feature"><span class="auth-feature-icon">📱</span><span>Instant transfers using your phone number</span></div>
-            <div class="auth-feature"><span class="auth-feature-icon">🔐</span><span>Secured by Clerk + JWT + Spring Security</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">📱</span><span>Your phone number = your transfer ID</span></div>
+            <div class="auth-feature"><span class="auth-feature-icon">🔐</span><span>Secured by BCrypt + JWT + Spring Security</span></div>
             <div class="auth-feature"><span class="auth-feature-icon">⚡</span><span>Account ready in under 2 minutes</span></div>
           </div>
         </div>
@@ -528,10 +487,28 @@
         <h1>Open Free Account</h1>
         <p class="auth-subtitle">Already have an account? <a href="#" onclick="navigateTo('login'); return false;">Sign in →</a></p>
 
-        <!-- Clerk Sign-Up Mount Point -->
-        <div id="clerkSignUpMount" style="min-height:80px; display:flex; align-items:center; justify-content:center;">
-          <div style="color:var(--gray-400); font-size:.85rem;">Loading secure sign-up…</div>
-        </div>
+        <!-- Standard Registration Form -->
+        <form id="registerForm" onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label for="regName">Full Name</label>
+            <input type="text" id="regName" class="form-input" placeholder="e.g. Aryan Sharma" required autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label for="regEmail">Email Address</label>
+            <input type="email" id="regEmail" class="form-input" placeholder="you@example.com" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label for="regPassword">Password <span style="color:var(--gray-400);font-weight:400">(min. 6 characters)</span></label>
+            <input type="password" id="regPassword" class="form-input" placeholder="Create a strong password" required minlength="6" autocomplete="new-password">
+          </div>
+          <div class="form-group">
+            <label for="regPhone">Mobile Number <span style="color:var(--gray-400);font-weight:400">(10 digits — your transfer ID)</span></label>
+            <input type="tel" id="regPhone" class="form-input" placeholder="9876543210" required pattern="\d{10}" maxlength="10"
+                   style="font-family:monospace; letter-spacing:.1em; font-size:1rem;">
+          </div>
+          <p id="regError" style="color:var(--danger);font-size:.85rem;margin-bottom:.75rem;display:none;"></p>
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="regBtn">Open Free Account →</button>
+        </form>
 
         <p style="font-size:.75rem; color:var(--gray-400); margin-top:1.5rem; text-align:center;">
           By creating an account, you agree to our <a href="#" style="color:var(--primary);">Terms of Service</a> and <a href="#" style="color:var(--primary);">Privacy Policy</a>.
@@ -555,7 +532,7 @@
         <p style="color:var(--gray-500); font-size:.9rem; line-height:1.9;">
           <strong style="color:var(--gray-900);">Backend:</strong> Spring Boot 4.1, Spring Security, Spring Data JPA, Hibernate ORM<br>
           <strong style="color:var(--gray-900);">Database:</strong> MySQL 9.0 with Hibernate auto-DDL<br>
-          <strong style="color:var(--gray-900);">Auth:</strong> Clerk (email OTP + Google) → JWT tokens (jjwt 0.11) + Spring Security<br>
+          <strong style="color:var(--gray-900);">Auth:</strong> Standard email + password → BCrypt hashing → JWT tokens (jjwt 0.11) + Spring Security<br>
           <strong style="color:var(--gray-900);">Frontend:</strong> Vanilla HTML5, CSS3, ES6+ JavaScript (no framework)<br>
           <strong style="color:var(--gray-900);">Security:</strong> BCrypt password hashing, CORS config, stateless sessions<br>
           <strong style="color:var(--gray-900);">APIs:</strong> RESTful endpoints with OpenAPI / Swagger UI
@@ -564,8 +541,8 @@
       <div class="card">
         <div class="card-header"><span class="card-title">Features</span></div>
         <ul style="color:var(--gray-500); font-size:.9rem; line-height:2; padding-left:1.25rem;">
-          <li>Clerk-powered authentication with email OTP — separate sign-in and sign-up flows</li>
-          <li>User-provided phone number onboarding — used as unique transfer ID</li>
+          <li>Standard email + password authentication — single-step register or login</li>
+          <li>Phone number collected at registration — used as unique transfer ID</li>
           <li>Deposit &amp; Withdraw with full transaction history</li>
           <li>Peer-to-peer instant transfer via phone number</li>
           <li>Admin dashboard with account management (block/unblock/close)</li>
